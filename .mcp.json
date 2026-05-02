@@ -1,0 +1,9 @@
+{
+  "mcp_servers": {
+    "anamnesis": {
+      "url": "https://anamnesis.smtry.ai/mcp",
+      "bearer_token_env_var": "ANAMNESIS_ACCESS_TOKEN",
+      "scopes": ["memory.read", "memory.write"]
+    }
+  }
+}

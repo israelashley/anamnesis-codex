@@ -1,0 +1,7 @@
+{
+  "name": "anamnesis",
+  "version": "0.1.0",
+  "description": "Persistent encrypted memory for OpenAI Codex CLI. Three lifecycle hooks (SessionStart / UserPromptSubmit / Stop) capture every session deterministically. Per-user HKDF-derived keys — vendor cannot decrypt your memory. Browse, search, and delete at anamnesis.smtry.ai/memory.",
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json"
+}
