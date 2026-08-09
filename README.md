@@ -43,26 +43,25 @@ the refresh token automatically before expiry.
 **If you've already run `anamnesis-config` from a sibling extension,
 skip this step.** All three plugins read the same config file.
 
-## Launch — `anamnesis-codex-launch` instead of `codex`
+## Launch — just `codex` (0.2.0+)
 
-Codex's MCP client expects the OAuth Bearer token in an environment
-variable (`ANAMNESIS_ACCESS_TOKEN`) at process start, rather than
-running its own OAuth dance. The bundled wrapper handles this:
+Since 0.2.0 the plugin registers a **self-authenticating stdio proxy**
+(`bin/anamnesis-mcp-proxy`) as its MCP server. Codex spawns it per
+session; the proxy reads and refreshes the OAuth token from
+`~/.anamnesis/config.json` itself — the same source the capture hooks
+use — and bridges stdio JSON-RPC to the remote endpoint. No wrapper, no
+environment variable, no shell alias: launch `codex` normally and the
+memory tools load in every new session.
+
+### Legacy wrapper (pre-0.2.0 installs)
+
+Older versions used a remote-URL MCP config that expected the token in
+`ANAMNESIS_ACCESS_TOKEN` at process start; the bundled
+`anamnesis-codex-launch` wrapper exported it. The wrapper still works
+and is kept for those installs:
 
 ```
 ~/.codex/plugins/cache/smtry/anamnesis/<version>/bin/anamnesis-codex-launch
-```
-
-Or — recommended — a shell function that resolves the newest installed
-version at call time (an alias with a hardcoded version breaks on
-plugin upgrades):
-
-```bash
-codex() {
-  local w
-  w="$(ls -1d "$HOME/.codex/plugins/cache/smtry/anamnesis"/*/bin/anamnesis-codex-launch 2>/dev/null | sort -V | tail -1)"
-  if [ -n "$w" ]; then "$w" "$@"; else command codex "$@"; fi
-}
 ```
 
 The wrapper:

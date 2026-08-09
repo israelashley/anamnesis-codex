@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""anamnesis-mcp-proxy — self-authenticating stdio MCP bridge.
+
+Codex spawns this per session (see .mcp.json). It bridges newline-delimited
+JSON-RPC on stdio to the remote Anamnesis MCP endpoint over HTTPS, reading
+and refreshing the OAuth token from ~/.anamnesis/config.json itself — the
+same source the capture hooks use.
+
+This replaces the anamnesis-codex-launch wrapper for MCP tools: the token
+is resolved at call time inside the proxy, so a plain `codex` launch gets
+the memory tools with no environment setup. The wrapper still works and is
+kept for older setups.
+
+Requires only the Python 3 standard library.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+CONFIG_PATH = os.path.join(
+    os.environ.get("ANAMNESIS_HOME", os.path.expanduser("~/.anamnesis")),
+    "config.json",
+)
+REFRESH_MARGIN_S = 60  # refresh if this close to expiry — matches common.sh
+TIMEOUT_S = 20
+
+
+def _log(msg: str) -> None:
+    print(f"anamnesis-mcp-proxy: {msg}", file=sys.stderr, flush=True)
+
+
+def _load_config() -> dict:
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as exc:
+        _log(f"cannot read {CONFIG_PATH}: {exc}. Run anamnesis-config first.")
+        sys.exit(1)
+
+
+def _save_config(cfg: dict) -> None:
+    tmp = f"{CONFIG_PATH}.tmp.{os.getpid()}"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, CONFIG_PATH)
+
+
+def _refresh_token(cfg: dict) -> dict:
+    """Refresh the access token if it is near expiry. Best-effort: on any
+    failure we keep the current token and let the server 401 tell the story."""
+    if not cfg.get("refresh_token"):
+        return cfg  # legacy api_key mode — nothing to refresh
+    if float(cfg.get("expires_at", 0)) > time.time() + REFRESH_MARGIN_S:
+        return cfg
+    server = cfg.get("server_url", "https://anamnesis.smtry.ai").rstrip("/")
+    body = urllib.parse.urlencode(
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": cfg["refresh_token"],
+            "client_id": cfg.get("client_id", ""),
+        }
+    ).encode()
+    req = urllib.request.Request(
+        f"{server}/oauth/token",
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+            tok = json.load(resp)
+        if tok.get("access_token") and tok.get("refresh_token"):
+            cfg["access_token"] = tok["access_token"]
+            cfg["refresh_token"] = tok["refresh_token"]
+            cfg["expires_at"] = int(time.time()) + int(tok.get("expires_in", 0))
+            _save_config(cfg)
+    except Exception as exc:  # noqa: BLE001 — stale token 401s downstream
+        _log(f"token refresh failed ({exc}); continuing with current token")
+    return cfg
+
+
+def _post(cfg: dict, message: dict) -> dict | None:
+    """Forward one JSON-RPC message; returns the response dict, or None for
+    accepted notifications. Retries once through a refresh on 401."""
+    server = cfg.get("server_url", "https://anamnesis.smtry.ai").rstrip("/")
+    for attempt in (1, 2):
+        auth = (
+            f"Bearer {cfg['access_token']}"
+            if cfg.get("access_token")
+            else None
+        )
+        req = urllib.request.Request(
+            f"{server}/mcp",
+            data=json.dumps(message).encode(),
+            headers={
+                "Content-Type": "application/json",
+                **({"Authorization": auth} if auth else {"X-Anamnesis-Key": cfg.get("api_key", "")}),
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+                raw = resp.read()
+                return json.loads(raw) if raw.strip() else None
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401 and attempt == 1 and cfg.get("refresh_token"):
+                cfg["expires_at"] = 0  # force refresh
+                cfg = _refresh_token(cfg)
+                continue
+            raise
+    return None
+
+
+def main() -> int:
+    cfg = _refresh_token(_load_config())
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            message = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        is_notification = "id" not in message
+        try:
+            response = _post(cfg, message)
+        except Exception as exc:  # noqa: BLE001 — surface as JSON-RPC error
+            if is_notification:
+                continue
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "error": {"code": -32000, "message": f"anamnesis proxy: {exc}"},
+            }
+        if response is not None and not is_notification:
+            sys.stdout.write(json.dumps(response) + "\n")
+            sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
