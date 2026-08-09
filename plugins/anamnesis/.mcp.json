@@ -1,8 +1,9 @@
 {
-  "mcp_servers": {
+  "mcpServers": {
     "anamnesis": {
-      "command": "${pluginPath}/bin/anamnesis-mcp-proxy",
-      "args": []
+      "command": "./bin/anamnesis-mcp-proxy",
+      "args": [],
+      "cwd": "${PLUGIN_ROOT}"
     }
   }
 }
