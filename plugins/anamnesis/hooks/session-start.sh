@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # anamnesis/hooks/session-start.sh
 # Fires once per Claude Code session. Issues a fresh session_id, drains
 # pending uploads from prior crashes, probes server reachability. Never

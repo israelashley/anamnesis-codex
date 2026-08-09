@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # anamnesis/hooks/common.sh — shared helpers sourced by every hook.
 # Principles (ADR-062 §7): fail-open. Hooks NEVER block Claude Code on
 # transient errors. Exit 0 with warnings on stderr; exit 1 only on hard
@@ -6,6 +6,10 @@
 # exit 2 reserved for programming bugs.
 
 set -u
+
+# Codex spawns hooks with a scrubbed environment; make jq/curl/date resolvable
+# regardless of the inherited PATH (fixes exit-127-class launch failures).
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin${PATH:+:$PATH}"
 
 ANAMNESIS_HOME="${ANAMNESIS_HOME:-$HOME/.anamnesis}"
 ANAMNESIS_CONFIG="$ANAMNESIS_HOME/config.json"

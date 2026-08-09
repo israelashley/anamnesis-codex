@@ -3,21 +3,21 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "${PLUGIN_ROOT}/hooks/session-start.sh" }
+          { "type": "command", "command": "./hooks/session-start.sh" }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "${PLUGIN_ROOT}/hooks/user-prompt-submit.sh" }
+          { "type": "command", "command": "./hooks/user-prompt-submit.sh" }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "${PLUGIN_ROOT}/hooks/stop.sh" }
+          { "type": "command", "command": "./hooks/stop.sh" }
         ]
       }
     ]

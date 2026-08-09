@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # anamnesis/hooks/user-prompt-submit.sh — Codex CLI UserPromptSubmit hook.
 #
 # Fires after the user submits a prompt, before Codex begins planning.

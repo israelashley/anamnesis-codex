@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # anamnesis/hooks/stop.sh — Codex CLI Stop hook.
 #
 # Fires once per turn after Codex generates its final response. Captures
