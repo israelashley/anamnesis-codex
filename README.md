@@ -21,6 +21,12 @@ codex plugin add anamnesis@smtry
 
 (`codex plugin list` should then show `anamnesis@smtry  installed, enabled`.)
 
+**First launch:** Codex will ask you to trust the plugin's hooks
+(Review / Trust all / Continue without). Choose **Trust all and
+continue** — the approval persists until the plugin updates. Codex has
+no install-time trust flow, and we deliberately don't pre-write trust
+hashes on your behalf: consent belongs to you, in Codex's own UI.
+
 Then, once:
 
 ```
