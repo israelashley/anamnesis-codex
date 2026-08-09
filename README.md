@@ -12,14 +12,19 @@ Gemini, and Claude lands in one place.
 
 ## Install
 
+Two steps — adding the marketplace does NOT install the plugin:
+
 ```
 codex plugin marketplace add israelashley/anamnesis-codex
+codex plugin add anamnesis@smtry
 ```
+
+(`codex plugin list` should then show `anamnesis@smtry  installed, enabled`.)
 
 Then, once:
 
 ```
-~/.codex/plugins/cache/anamnesis@*/bin/anamnesis-config
+~/.codex/plugins/cache/smtry/anamnesis/<version>/bin/anamnesis-config
 ```
 
 (Or run `anamnesis-config` from any directory if you've installed
@@ -45,13 +50,19 @@ variable (`ANAMNESIS_ACCESS_TOKEN`) at process start, rather than
 running its own OAuth dance. The bundled wrapper handles this:
 
 ```
-~/.codex/plugins/cache/anamnesis@*/bin/anamnesis-codex-launch
+~/.codex/plugins/cache/smtry/anamnesis/<version>/bin/anamnesis-codex-launch
 ```
 
-Or — recommended — alias it:
+Or — recommended — a shell function that resolves the newest installed
+version at call time (an alias with a hardcoded version breaks on
+plugin upgrades):
 
 ```bash
-alias codex='~/.codex/plugins/cache/anamnesis@latest/bin/anamnesis-codex-launch'
+codex() {
+  local w
+  w="$(ls -1d "$HOME/.codex/plugins/cache/smtry/anamnesis"/*/bin/anamnesis-codex-launch 2>/dev/null | sort -V | tail -1)"
+  if [ -n "$w" ]; then "$w" "$@"; else command codex "$@"; fi
+}
 ```
 
 The wrapper:
