@@ -3,7 +3,7 @@
     "anamnesis": {
       "command": "./bin/anamnesis-mcp-proxy",
       "args": [],
-      "cwd": "${PLUGIN_ROOT}"
+      "cwd": "./"
     }
   }
 }
